@@ -1,0 +1,273 @@
+# -*- coding: utf-8 -*-
+import sys
+from PyQt5.QtWidgets import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import Qt
+import qdarkstyle
+from PyQt5.QtSql import *
+
+
+class BookStorageViewer(QWidget):
+    def __init__(self):
+        super(BookStorageViewer, self).__init__()
+        self.resize(700, 460)
+        self.setWindowTitle("欢迎使用图书馆管理系统")
+        # 查询模型
+        self.queryModel = None
+        # 数据表
+        self.tableView = None
+        # 当前页
+        self.currentPage = 0
+        # 总页数
+        self.totalPage = 0
+        # 总记录数
+        self.totalRecord = 0
+        # 每页数据数
+        self.pageRecord = 10
+        self.setUpUI()
+
+    def setUpUI(self):
+        self.layout = QVBoxLayout()
+        self.Hlayout1 = QHBoxLayout()
+        self.Hlayout2 = QHBoxLayout()
+
+        # Hlayout1控件的初始化
+        self.searchEdit = QLineEdit()
+        self.searchEdit.setFixedHeight(32)
+        font = QFont()
+        font.setPixelSize(15)
+        self.searchEdit.setFont(font)
+
+        self.searchButton = QPushButton("查询")
+        self.searchButton.setFixedHeight(32)
+        self.searchButton.setFont(font)
+        self.searchButton.setIcon(QIcon(QPixmap("./images/search.png")))
+
+        self.condisionComboBox = QComboBox()
+        searchCondision = ['按书名查询', '按书号查询', '按作者查询', '按分类查询', '按出版社查询']
+        self.condisionComboBox.setFixedHeight(32)
+        self.condisionComboBox.setFont(font)
+        self.condisionComboBox.addItems(searchCondision)
+
+        self.Hlayout1.addWidget(self.searchEdit)
+        self.Hlayout1.addWidget(self.searchButton)
+        self.Hlayout1.addWidget(self.condisionComboBox)
+
+        # Hlayout2初始化
+        self.jumpToLabel = QLabel("跳转到第")
+        self.pageEdit = QLineEdit()
+        self.pageEdit.setFixedWidth(30)
+        s = "/" + str(self.totalPage) + "页"
+        self.pageLabel = QLabel(s)
+        self.jumpToButton = QPushButton("跳转")
+        self.prevButton = QPushButton("前一页")
+        self.prevButton.setFixedWidth(100)
+        self.backButton = QPushButton("后一页")
+        self.backButton.setFixedWidth(100)
+
+        Hlayout = QHBoxLayout()
+        Hlayout.addWidget(self.jumpToLabel)
+        Hlayout.addWidget(self.pageEdit)
+        Hlayout.addWidget(self.pageLabel)
+        Hlayout.addWidget(self.jumpToButton)
+        Hlayout.addWidget(self.prevButton)
+        Hlayout.addWidget(self.backButton)
+        widget = QWidget()
+        widget.setLayout(Hlayout)
+        widget.setFixedWidth(700)
+        self.Hlayout2.addWidget(widget)
+
+        # tableView
+        # 序号，书名，书号，作者，分类，出版社，出版时间，库存，剩余可借
+        self.db = QSqlDatabase.addDatabase("QODBC",'BookStorageViewerConn')
+        '''
+        指定数据库别名，避免出现：
+        QSqlDatabasePrivate::removeDatabase: connection 'qt_sql_default_connection' is still in use, all queries will cease to work.
+        QSqlDatabasePrivate::addDatabase: duplicate connection name 'qt_sql_default_connection', old connection removed.
+        错误
+        添加别名后，需要在setQuery查询中指定db，此处即为self.db
+        '''
+        self.db.setDatabaseName("Driver={Sql Server};Server=localhost;Database=Library;")#Uid=sa;Pwd=123456
+        self.db.open()
+        
+        self.tableView = QTableView()
+        self.tableView.horizontalHeader().setStretchLastSection(True)
+        self.tableView.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.tableView.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.queryModel = QSqlQueryModel()
+        self.searchButtonClicked()
+        self.tableView.setModel(self.queryModel)
+
+        self.queryModel.setHeaderData(0, Qt.Horizontal, "书号")
+        self.queryModel.setHeaderData(1, Qt.Horizontal, "编号")
+        self.queryModel.setHeaderData(2, Qt.Horizontal, "书名")
+        self.queryModel.setHeaderData(3, Qt.Horizontal, "作者")
+        self.queryModel.setHeaderData(4, Qt.Horizontal, "出版社")
+        self.queryModel.setHeaderData(5, Qt.Horizontal, "出版时间")
+        self.queryModel.setHeaderData(6, Qt.Horizontal, "ISBN")
+        self.queryModel.setHeaderData(7, Qt.Horizontal, "分类")
+        self.queryModel.setHeaderData(8, Qt.Horizontal, "语言")
+        self.queryModel.setHeaderData(9, Qt.Horizontal, "页数")
+        self.queryModel.setHeaderData(10, Qt.Horizontal, "价格")
+        self.queryModel.setHeaderData(11, Qt.Horizontal, "入馆时间")
+        self.queryModel.setHeaderData(12, Qt.Horizontal, "简介")
+        self.queryModel.setHeaderData(13, Qt.Horizontal, "封面")
+        self.queryModel.setHeaderData(14, Qt.Horizontal, "状态")
+
+        self.layout.addLayout(self.Hlayout1)
+        self.layout.addWidget(self.tableView)
+        self.layout.addLayout(self.Hlayout2)
+        self.setLayout(self.layout)
+        self.searchButton.clicked.connect(self.searchButtonClicked)
+        self.prevButton.clicked.connect(self.prevButtonClicked)
+        self.backButton.clicked.connect(self.backButtonClicked)
+        self.jumpToButton.clicked.connect(self.jumpToButtonClicked)
+        self.searchEdit.returnPressed.connect(self.searchButtonClicked)
+
+    def setButtonStatus(self):
+        if(self.currentPage==self.totalPage):
+            self.prevButton.setEnabled(True)
+            self.backButton.setEnabled(False)
+        if(self.currentPage==1):
+            self.backButton.setEnabled(True)
+            self.prevButton.setEnabled(False)
+        if(self.currentPage<self.totalPage and self.currentPage>1):
+            self.prevButton.setEnabled(True)
+            self.backButton.setEnabled(True)
+
+    # 得到记录数
+    def getTotalRecordCount(self):
+        self.queryModel.setQuery("SELECT * FROM TB_Book",self.db)
+        self.totalRecord = self.queryModel.rowCount()
+        return
+
+    # 得到总页数
+    def getPageCount(self):
+        self.getTotalRecordCount()
+        # 上取整
+        self.totalPage = int((self.totalRecord + self.pageRecord - 1) / self.pageRecord)
+        return
+
+    # 分页记录查询
+    def recordQuery(self, index):
+        queryCondition = ""
+        conditionChoice = self.condisionComboBox.currentText()
+        if (conditionChoice == "按书名查询"):
+            conditionChoice = 'bkName'
+        elif (conditionChoice == "按书号查询"):
+            conditionChoice = 'bkId'
+        elif (conditionChoice == "按作者查询"):
+            conditionChoice = 'bkAuthor'
+        elif (conditionChoice == '按分类查询'):
+            conditionChoice = 'bkCatalog'
+        else:
+            conditionChoice = 'bkPress'
+
+        if (self.searchEdit.text() == ""):
+            queryCondition = "select * from TB_Book"
+            self.queryModel.setQuery(queryCondition,self.db)
+            self.totalRecord = self.queryModel.rowCount()
+            self.totalPage = int((self.totalRecord + self.pageRecord - 1) / self.pageRecord)
+            label = "/" + str(int(self.totalPage)) + "页"
+            self.pageLabel.setText(label)
+            queryCondition = (f"select top ({self.pageRecord}) * from TB_Book  where bkID not in(select top ({index}) bkID from TB_Book) ORDER BY {conditionChoice}")
+            self.queryModel.setQuery(queryCondition,self.db)
+            self.setButtonStatus()
+            return
+
+        # 得到模糊查询条件
+        temp = self.searchEdit.text()
+        s = f"%{temp}%"
+        queryCondition = (f"SELECT * FROM TB_Book WHERE {conditionChoice} LIKE '%{temp}%' ORDER BY {conditionChoice} ")
+        print(queryCondition)
+        self.queryModel.setQuery(queryCondition,self.db)
+        self.totalRecord = self.queryModel.rowCount()
+        print(self.totalRecord)
+        # 当查询无记录时的操作
+        if(self.totalRecord==0):
+            print(QMessageBox.information(self,"提醒","查询无记录",QMessageBox.Yes,QMessageBox.Yes))
+            queryCondition = "select * from TB_Book"
+            self.queryModel.setQuery(queryCondition,self.db)
+            self.totalRecord = self.queryModel.rowCount()
+            self.totalPage = int((self.totalRecord + self.pageRecord - 1) / self.pageRecord)
+            label = "/" + str(int(self.totalPage)) + "页"
+            self.pageLabel.setText(label)
+            #queryCondition = ("select * from TB_Book ORDER BY %s  limit %d,%d " % (conditionChoice,index, self.pageRecord))
+            queryCondition = (f"select top ({self.pageRecord}) * from TB_Book  where bkID not in(select top ({index}) bkID from TB_Book) ORDER BY {conditionChoice}")
+            self.queryModel.setQuery(queryCondition,self.db)
+            self.setButtonStatus()
+            return
+        self.totalPage = int((self.totalRecord + self.pageRecord - 1) / self.pageRecord)
+        label = "/" + str(int(self.totalPage)) + "页"
+        self.pageLabel.setText(label)
+        '''queryCondition = ("SELECT * FROM TB_Book WHERE %s LIKE '%s' ORDER BY %s LIMIT %d,%d " % (
+            conditionChoice, s, conditionChoice,index, self.pageRecord))'''
+        queryCondition = (f"select top ({self.pageRecord}) * from TB_Book  where {conditionChoice} LIKE '{s}' and bkID not in (select top ({index}) bkID from TB_Book where {conditionChoice} LIKE '{s}') ORDER BY {conditionChoice}")
+        self.queryModel.setQuery(queryCondition,self.db)
+        self.setButtonStatus()
+        return
+
+    # 点击查询
+    def searchButtonClicked(self):
+        self.currentPage = 1
+        self.pageEdit.setText(str(self.currentPage))
+        self.getPageCount()
+        s = "/" + str(int(self.totalPage)) + "页"
+        self.pageLabel.setText(s)
+        index = (self.currentPage - 1) * self.pageRecord
+        self.recordQuery(index)
+        return
+
+    # 向前翻页
+    def prevButtonClicked(self):
+        self.currentPage -= 1
+        if (self.currentPage <= 1):
+            self.currentPage = 1
+        self.pageEdit.setText(str(self.currentPage))
+        index = (self.currentPage - 1) * self.pageRecord
+        self.recordQuery(index)
+        return
+
+    # 向后翻页
+    def backButtonClicked(self):
+        self.currentPage += 1
+        if (self.currentPage >= int(self.totalPage)):
+            self.currentPage = int(self.totalPage)
+        self.pageEdit.setText(str(self.currentPage))
+        index = (self.currentPage - 1) * self.pageRecord
+        self.recordQuery(index)
+        return
+
+    # 点击跳转
+    def jumpToButtonClicked(self):
+        if (self.pageEdit.text().isdigit()):
+            self.currentPage = int(self.pageEdit.text())
+            if (self.currentPage > self.totalPage):
+                self.currentPage = self.totalPage
+            if (self.currentPage <= 1):
+                self.currentPage = 1
+        else:
+            self.currentPage = 1
+        index = (self.currentPage - 1) * self.pageRecord
+        self.pageEdit.setText(str(self.currentPage))
+        self.recordQuery(index)
+        return
+def closeDatabase(self):
+        self.tableView.setModel(None)
+        del self.model
+        self.db.close()
+        del self.db
+        QSqlDatabase.removeDatabase('UserListViewerConn')
+        print('hello')
+      
+def closeEvent(self, event):
+    QSqlDatabase.addDatabase("QODBC").close()
+    QSqlDatabase.removeDatabase('BookStorageViewerConn')
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    app.setWindowIcon(QIcon("./images/MainWindow_1.png"))
+    app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    mainMindow = BookStorageViewer()
+    mainMindow.show()
+    sys.exit(app.exec_())

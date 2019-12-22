@@ -1,0 +1,26 @@
+子功能模块分析
+读者管理ReaderManagement：
+    1.办理借书证
+    2.变更借书证
+    3.解除挂失*
+    4.补办借书证*
+    5.注销借书证*
+    6.批量办理新生借书证*
+读者类型管理ReaderTypeManagement：
+    1.读者类型的增删改查
+图书管理BookManagement：
+    1.图书编目
+    2.新书入库
+    3.图书信息维护
+    4.在馆图书的变卖和销毁*
+借阅管理BorrowManagement：
+    1.借书
+    2.续借
+    3.还书
+用户登录与用户管理AccountManagement：
+    1.用户登录
+    2.密码修改
+    3.用户管理*
+读者查询与预约借书：ReaderQueryAndReservation*
+统计与报表：DataStatisticAndReport. *
+数据备份：DataBackup*
