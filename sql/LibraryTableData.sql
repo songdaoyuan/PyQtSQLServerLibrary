@@ -16,7 +16,7 @@ GO
 SELECT rdAdminRoles FROM TB_Reader WHERE rdID=1 AND rdPwd=''
 GO
 --修改密码的SQL语句
-UPDATE TB_Reader SET rdPwd='sdy317421' WHERE rdID=1
+UPDATE TB_Reader SET rdPwd='password' WHERE rdID=1
 GO
 --初始化TB_Book表内数据
 INSERT INTO TB_Book VALUES(1,'9787115313980','SQL必知必会','Ben Forta','人民邮电出版社','2013-05-01 00:00:00','9787115313980','TP311.131',0,239,29.00,GETDATE(),'畅销全球的数据库入门经典','','在馆')
@@ -46,8 +46,8 @@ TB_Book表的数据结构参考
 15	bkStatus	NChar(2)	图书状态，在馆、借出、遗失、变卖、销毁
 */
 --初始化TB_Reader表内数据
-INSERT INTO TB_Reader VALUES(1,'宋道源','男',20,'CS','15171539455','835128023@qq.com',GETDATE(),'','有效',0,'sdy2000317421',15)
-INSERT INTO TB_Reader VALUES(2,'朱晨光','男',21,'CS','13349745060','841102344@qq.com',GETDATE(),'','有效',0,'123',15)
+INSERT INTO TB_Reader VALUES(1,'宋DY','男',20,'CS','155','321@qq.com',GETDATE(),'','有效',0,'123',15)
+INSERT INTO TB_Reader VALUES(2,'朱CG','男',21,'CS','123','123@qq.com',GETDATE(),'','有效',0,'123',15)
 GO
 --查看TB_Reader表
 SELECT * FROM TB_Reader
