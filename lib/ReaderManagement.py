@@ -64,6 +64,6 @@ class ReaderManagement():
 
 if __name__ == '__main__':
     '''rm = ReaderManagement()
-    rdInfoList = ['朱晨光','男',21,'CS','13349745060','841102344@qq.com','','有效',0,'123',15]
+    rdInfoList = ['某个人','男',21,'CS','133567745060','88888888@qq.com','','有效',0,'123',15]
     rm.NewLibraryCard(rdInfoList)'''
     pass
