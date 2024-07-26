@@ -79,6 +79,6 @@ class Account(MSSQL):
 if __name__ == '__main__':
     #实例化自身的测试代码放在这里
     ac = Account()
-    r= ac.Login('1','sdy2000317421')
+    r= ac.Login('1','myPasswork1')
     print(r)
-    #ac.ChangePwd('sdy2000317421')
+    #ac.ChangePwd('myPasswork1')
